@@ -16,7 +16,7 @@ pub type Height = u64;
 /// the height, the time, the hash of the validator set
 /// that should sign this header, and the hash of the validator
 /// set that should sign the next header.
-pub trait Header/*: Clone*/ {
+pub trait Header: Clone {
     /// The header's notion of (bft-)time.
     /// We assume it can be converted to SystemTime.
     //type Time: Into<SystemTime>;
@@ -29,7 +29,7 @@ pub trait Header/*: Clone*/ {
     /// Hash of the header (ie. the hash of the block).
     fn hash(&self) -> Hash;
 }
-
+/*
 /// ValidatorSet is the full validator set.
 /// It exposes its hash and its total power.
 pub trait ValidatorSet/*: Clone*/ {
@@ -39,13 +39,30 @@ pub trait ValidatorSet/*: Clone*/ {
     /// Total voting power of the set
     fn total_power(&self) -> u64;
 }
+*/
+#[derive(Clone)]
+pub struct ValidatorSetImpl {
+    hash: Hash,
+    total_power: u64,
+}
+
+impl ValidatorSetImpl {
+    /// Hash of the validator set.
+    pub fn hash(&self) -> Hash {
+        self.hash.clone()
+    }
+
+    /// Total voting power of the set
+    pub fn total_power(&self) -> u64 {
+        self.total_power
+    }
+}
+
 
 /// Commit is used to prove a Header can be trusted.
 /// Verifying the Commit requires access to an associated ValidatorSet
 /// to determine what voting power signed the commit.
-pub trait Commit/*: Clone*/ {
-    type ValidatorSet: ValidatorSet;
-
+pub trait Commit: Clone {
     /// Hash of the header this commit is for.
     fn header_hash(&self) -> Hash;
 
@@ -64,13 +81,13 @@ pub trait Commit/*: Clone*/ {
     /// Note this expects the Commit to be able to compute `signers(h.Commit)`,
     /// ie. the identity of the validators that signed it, so they
     /// can be cross-referenced with the given `vals`.
-    fn voting_power_in(&self, vals: &Self::ValidatorSet) -> Result<u64, Error>;
+    fn voting_power_in(&self, vals: &ValidatorSetImpl) -> Result<u64, Error>;
 
     /// Implementers should add addition validation against the given validator set
     /// or other implementation specific validation here.
     /// E.g. validate that the length of the included signatures in the commit match
     /// with the number of validators.
-    fn validate(&self, vals: &Self::ValidatorSet) -> Result<(), Error>;
+    fn validate(&self, vals: &ValidatorSetImpl) -> Result<(), Error>;
 }
 
 /// TrustThreshold defines how much of the total voting power of a known
@@ -159,7 +176,7 @@ where
     fn signed_header(&self, h: Height) -> Result<SignedHeader<C, H>, Error>;
 
     /// Request the validator set at height h.
-    fn validator_set(&self, h: Height) -> Result<C::ValidatorSet, Error>;
+    fn validator_set(&self, h: Height) -> Result<ValidatorSetImpl, Error>;
 }
 
 
@@ -167,17 +184,18 @@ where
 /// including the last header (at height h-1) and the validator set
 /// (at height h) to use to verify the next header.
 // #[derive(Clone, Debug, PartialEq)]
+#[derive(Clone)]
 pub struct TrustedState<C, H>
 where
     H: Header,
     C: Commit,
 {
     last_header: SignedHeader<C, H>, // height H-1
-    validators: C::ValidatorSet,     // height H
+    validators: ValidatorSetImpl,     // height H
 }
 
 // 'not yet implemented: TyProjection(ProjectionTy { substs: [C], item_def_id: DefId(0/0:27 ~ main[317d]::lite[0]::types[0]::Commit[0]::ValidatorSet[0]) })', prusti-viper/src/encoder/type_encoder.rs:483:22
-/*
+
 impl<C, H> TrustedState<C, H>
 where
     H: Header,
@@ -186,7 +204,7 @@ where
     /// Initialize the TrustedState with the given signed header and validator set.
     /// Note that if the height of the passed in header is h-1, the passed in validator set
     /// must have been requested for height h.
-    pub fn new(last_header: &SignedHeader<C, H>, validators: &C::ValidatorSet) -> Self {
+    pub fn new(last_header: &SignedHeader<C, H>, validators: &ValidatorSetImpl) -> Self {
         Self {
             last_header: last_header.clone(),
             validators: validators.clone(),
@@ -197,14 +215,15 @@ where
         &self.last_header
     }
 
-    pub fn validators(&self) -> &C::ValidatorSet {
+    pub fn validators(&self) -> &ValidatorSetImpl {
         &self.validators
     }
 }
-*/
+
 
 /// SignedHeader bundles a [`Header`] and a [`Commit`] for convenience.
 // #[derive(Clone, Debug, PartialEq)] // NOTE: Copy/Clone/Debug for convenience in testing ...
+#[derive(Clone)]
 pub struct SignedHeader<C, H>
 where
     C: Commit,

@@ -12,10 +12,7 @@ use std::cmp::Ordering;
 use std::time::{Duration, SystemTime};
 
 use lite::error::{Error, Kind};
-use lite::types::{
-    Commit, Header, Height, Requester, SignedHeader, TrustThreshold, TrustedState, ValidatorSet,
-};
-// use anomaly::ensure;
+use lite::types::{Commit, Header, Height, Requester, SignedHeader, TrustThreshold, TrustedState, ValidatorSetImpl};
 use std::ops::Add;
 
 /// Returns an error if the header has expired according to the given
@@ -40,13 +37,6 @@ where
     }
     // Also make sure the header is not after now.
     if header_time > now {
-        /*ensure!(
-            header_time <= now,
-            Kind::DurationOutOfRange,
-            "header time: ({:?}) > now: ({:?})",
-            header_time,
-            now
-        );*/
         Err(Kind::DurationOutOfRange)
     } else {
         Ok(())
@@ -58,14 +48,14 @@ where
 /// This is equivalent to validateSignedHeaderAndVals in the spec.
 fn validate<C, H>(
     signed_header: &SignedHeader<C, H>,
-    vals: &C::ValidatorSet,
-    next_vals: &C::ValidatorSet,
+    vals: &ValidatorSetImpl,
+    next_vals: &ValidatorSetImpl,
 ) -> Result<(), Error>
 where
     C: Commit,
     H: Header,
 {
-    /*let header = signed_header.header();
+    let header = signed_header.header();
     let commit = signed_header.commit();
 
     // ensure the header validator hashes match the given validators
@@ -95,16 +85,14 @@ where
 
     // additional implementation specific validation:
     commit.validate(vals)?;
-    */
     Ok(())
 }
 
-/*
 /// Verify that +2/3 of the correct validator set signed this commit.
 /// NOTE: These validators are expected to be the correct validators for the commit,
 /// but since we're using voting_power_in, we can't actually detect if there's
 /// votes from validators not in the set.
-fn verify_commit_full<C>(vals: &C::ValidatorSet, commit: &C) -> Result<(), Error>
+fn verify_commit_full<C>(vals: &ValidatorSetImpl, commit: &C) -> Result<(), Error>
 where
     C: Commit,
 {
@@ -128,7 +116,7 @@ where
 /// but there may be some intersection. The trust_level parameter allows clients to require more
 /// than +1/3 by implementing the TrustLevel trait accordingly.
 fn verify_commit_trusting<C, L>(
-    validators: &C::ValidatorSet,
+    validators: &ValidatorSetImpl,
     commit: &C,
     trust_level: L,
 ) -> Result<(), Error>
@@ -139,13 +127,14 @@ where
     let total_power = validators.total_power();
     let signed_power = commit.voting_power_in(validators)?;
 
+    // TODO: can add invariant in trait
     // check the signers account for +1/3 of the voting power (or more if the
     // trust_level requires so)
     if !trust_level.is_enough_power(signed_power, total_power) {
         return Err(Kind::InsufficientVotingPower {
             total: total_power,
             signed: signed_power,
-            trust_treshold: format!("{:?}", trust_level),
+            // trust_treshold: format!("{:?}", trust_level),
         }
         .into());
     }
@@ -162,8 +151,8 @@ where
 fn verify_single_inner<H, C, L>(
     trusted_state: &TrustedState<C, H>,
     untrusted_sh: &SignedHeader<C, H>,
-    untrusted_vals: &C::ValidatorSet,
-    untrusted_next_vals: &C::ValidatorSet,
+    untrusted_vals: &ValidatorSetImpl,
+    untrusted_next_vals: &ValidatorSetImpl,
     trust_threshold: L,
 ) -> Result<(), Error>
 where
@@ -185,11 +174,14 @@ where
     let untrusted_height = untrusted_sh.header().height();
 
     // ensure the untrusted_header.bft_time() > trusted_header.bft_time()
-    if untrusted_header.bft_time().into() <= trusted_header.bft_time().into() {
+    if untrusted_header.bft_time() <= trusted_header.bft_time() {
         return Err(Kind::NonIncreasingTime.into());
     }
-
-    match untrusted_height.cmp(&trusted_height.checked_add(1).expect("height overflow")) {
+    let inc_trusted_height = match trusted_height.checked_add(1) {
+        Some(inc_trusted_height) => inc_trusted_height,
+        None => panic!("height overflow") // TODO: return err
+    };
+    match untrusted_height.cmp(&inc_trusted_height) {
         Ordering::Less => {
             return Err(Kind::NonIncreasingHeight {
                 got: untrusted_height,
@@ -220,7 +212,7 @@ where
     // All validation passed successfully. Verify the validators correctly committed the block.
     verify_commit_full(untrusted_vals, untrusted_sh.commit())
 }
-
+/*
 /// Verify a single untrusted header against a trusted state.
 /// Ensures our last trusted header hasn't expired yet, and that
 /// the untrusted header can be verified using only our latest trusted

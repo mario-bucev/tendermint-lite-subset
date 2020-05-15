@@ -19,7 +19,7 @@ pub enum Algorithm {
 
 /// Hash digests
 // #[derive(Copy, Clone, Hash, Eq, PartialEq, PartialOrd, Ord)]
-#[derive(Copy, Clone)] // Eq, PartialEq cause a crash 
+#[derive(Copy, Clone)] // Eq, PartialEq cause a crash
 pub enum Hash {
     /// SHA-256 hashes
     Sha256([u8; SHA256_HASH_SIZE]),
@@ -66,6 +66,32 @@ impl Hash {
         }
     }
 }
+
+impl PartialEq for Hash {
+    fn eq(&self, other: &Self) -> bool {
+        let mut i = 0;
+        let mut cont_loop = i < SHA256_HASH_SIZE;
+        let mut res = true;
+        #[invariant="cont_loop ==> i < SHA256_HASH_SIZE"]
+        #[invariant="!cont_loop ==> i >= SHA256_HASH_SIZE"]
+        while cont_loop {
+            // We copy to avoid a crash due to limit support of reference-typed fields.
+            match (*self, *other) {
+                (Hash::Sha256(self_arr), Hash::Sha256(other_arr)) => {
+                    if self_arr[i] != other_arr[i] {
+                        res = false;
+                    }
+                }
+            }
+            i += 1;
+            cont_loop = i < SHA256_HASH_SIZE && res;
+        }
+        res
+    }
+}
+
+impl Eq for Hash {}
+
 /*
 impl Debug for Hash {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
