@@ -1,0 +1,3 @@
+[package]
+name = "tendermint-lite-subset"
+version = "0.1.0"

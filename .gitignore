@@ -1,0 +1,7 @@
+/target
+.idea/
+**/*.rs.bk
+src/log.txt
+src/program.vpr
+src/log/
+src/nll-facts/
