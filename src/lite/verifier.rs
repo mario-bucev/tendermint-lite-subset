@@ -9,11 +9,11 @@
 //! ```
 
 use std::cmp::Ordering;
+use std::ops::Add;
 use std::time::{Duration, SystemTime};
 
 use lite::error::{Error, Kind};
-use lite::types::{Commit, Header, Height, Requester, SignedHeader, TrustThreshold, TrustedState, ValidatorSetImpl};
-use std::ops::Add;
+use lite::types::{Commit, Header, Height, Requester, SignedHeader, TrustedState, TrustThreshold, ValidatorSetImpl};
 
 /// Returns an error if the header has expired according to the given
 /// trusting_period and current time. If so, the verifier must be reset subjectively.
@@ -22,8 +22,8 @@ fn is_within_trust_period<H>(
     trusting_period: Duration,
     now: SystemTime,
 ) -> Result<(), Error>
-where
-    H: Header,
+    where
+        H: Header,
 {
     let header_time: SystemTime = last_header.bft_time();
     let expires_at = header_time.add(trusting_period);
@@ -32,8 +32,7 @@ where
         return Err(Kind::Expired {
             at: expires_at,
             now,
-        }
-        .into());
+        }.into());
     }
     // Also make sure the header is not after now.
     if header_time > now {
@@ -43,7 +42,6 @@ where
     }
 }
 
-
 /// Validate the validators, next validators, against the signed header.
 /// This is equivalent to validateSignedHeaderAndVals in the spec.
 fn validate<C, H>(
@@ -51,9 +49,9 @@ fn validate<C, H>(
     vals: &ValidatorSetImpl,
     next_vals: &ValidatorSetImpl,
 ) -> Result<(), Error>
-where
-    C: Commit,
-    H: Header,
+    where
+        C: Commit,
+        H: Header,
 {
     let header = signed_header.header();
     let commit = signed_header.commit();
@@ -61,26 +59,23 @@ where
     // ensure the header validator hashes match the given validators
     if header.validators_hash() != vals.hash() {
         return Err(Kind::InvalidValidatorSet {
-            header_val_hash: header.validators_hash(),
-            val_hash: vals.hash(),
-        }
-        .into());
+            // header_val_hash: header.validators_hash(),
+            // val_hash: vals.hash(),
+        }.into());
     }
     if header.next_validators_hash() != next_vals.hash() {
         return Err(Kind::InvalidNextValidatorSet {
-            header_next_val_hash: header.next_validators_hash(),
-            next_val_hash: next_vals.hash(),
-        }
-        .into());
+            // header_next_val_hash: header.next_validators_hash(),
+            // next_val_hash: next_vals.hash(),
+        }.into());
     }
 
     // ensure the header matches the commit
     if header.hash() != commit.header_hash() {
         return Err(Kind::InvalidCommitValue {
-            header_hash: header.hash(),
-            commit_hash: commit.header_hash(),
-        }
-        .into());
+            // header_hash: header.hash(),
+            // commit_hash: commit.header_hash(),
+        }.into());
     }
 
     // additional implementation specific validation:
@@ -93,8 +88,8 @@ where
 /// but since we're using voting_power_in, we can't actually detect if there's
 /// votes from validators not in the set.
 fn verify_commit_full<C>(vals: &ValidatorSetImpl, commit: &C) -> Result<(), Error>
-where
-    C: Commit,
+    where
+        C: Commit,
 {
     let total_power = vals.total_power();
     let signed_power = commit.voting_power_in(vals)?;
@@ -104,8 +99,7 @@ where
         return Err(Kind::InvalidCommit {
             total: total_power,
             signed: signed_power,
-        }
-        .into());
+        }.into());
     }
 
     Ok(())
@@ -120,9 +114,9 @@ fn verify_commit_trusting<C, L>(
     commit: &C,
     trust_level: L,
 ) -> Result<(), Error>
-where
-    C: Commit,
-    L: TrustThreshold,
+    where
+        C: Commit,
+        L: TrustThreshold,
 {
     let total_power = validators.total_power();
     let signed_power = commit.voting_power_in(validators)?;
@@ -135,8 +129,7 @@ where
             total: total_power,
             signed: signed_power,
             // trust_treshold: format!("{:?}", trust_level),
-        }
-        .into());
+        }.into());
     }
 
     Ok(())
@@ -155,10 +148,10 @@ fn verify_single_inner<H, C, L>(
     untrusted_next_vals: &ValidatorSetImpl,
     trust_threshold: L,
 ) -> Result<(), Error>
-where
-    H: Header,
-    C: Commit,
-    L: TrustThreshold,
+    where
+        H: Header,
+        C: Commit,
+        L: TrustThreshold,
 {
     // validate the untrusted header against its commit, vals, and next_vals
     let untrusted_header = untrusted_sh.header();
@@ -179,40 +172,36 @@ where
     }
     let inc_trusted_height = match trusted_height.checked_add(1) {
         Some(inc_trusted_height) => inc_trusted_height,
-        None => panic!("height overflow") // TODO: return err
+        None => return Err(Kind::ImplementationSpecific),
     };
-    match untrusted_height.cmp(&inc_trusted_height) {
-        Ordering::Less => {
-            return Err(Kind::NonIncreasingHeight {
-                got: untrusted_height,
-                expected: trusted_height + 1,
-            }
-            .into())
+    // TODO: using untrusted_height.cmp(&inc_trusted_height) causes a crash
+    // match untrusted_height.cmp(&inc_trusted_height) ... ;
+    if untrusted_height < inc_trusted_height {
+        return Err(Kind::NonIncreasingHeight {
+            got: untrusted_height,
+            expected: trusted_height + 1,
+        }.into());
+    } else if untrusted_height == inc_trusted_height {
+        let trusted_vals_hash = trusted_header.next_validators_hash();
+        let untrusted_vals_hash = untrusted_header.validators_hash();
+        if trusted_vals_hash != untrusted_vals_hash {
+            // TODO: more specific error
+            // ie. differentiate from when next_vals.hash() doesnt
+            // match the header hash ...
+            return Err(Kind::InvalidNextValidatorSet {
+                // header_next_val_hash: trusted_vals_hash,
+                // next_val_hash: untrusted_vals_hash,
+            }.into());
         }
-        Ordering::Equal => {
-            let trusted_vals_hash = trusted_header.next_validators_hash();
-            let untrusted_vals_hash = untrusted_header.validators_hash();
-            if trusted_vals_hash != untrusted_vals_hash {
-                // TODO: more specific error
-                // ie. differentiate from when next_vals.hash() doesnt
-                // match the header hash ...
-                return Err(Kind::InvalidNextValidatorSet {
-                    header_next_val_hash: trusted_vals_hash,
-                    next_val_hash: untrusted_vals_hash,
-                }
-                .into());
-            }
-        }
-        Ordering::Greater => {
-            let trusted_vals = trusted_state.validators();
-            verify_commit_trusting(trusted_vals, untrusted_commit, trust_threshold)?;
-        }
+    } else {
+        let trusted_vals = trusted_state.validators();
+        verify_commit_trusting(trusted_vals, untrusted_commit, trust_threshold)?;
     }
 
     // All validation passed successfully. Verify the validators correctly committed the block.
     verify_commit_full(untrusted_vals, untrusted_sh.commit())
 }
-/*
+
 /// Verify a single untrusted header against a trusted state.
 /// Ensures our last trusted header hasn't expired yet, and that
 /// the untrusted header can be verified using only our latest trusted
@@ -225,16 +214,16 @@ where
 pub fn verify_single<H, C, L>(
     trusted_state: TrustedState<C, H>,
     untrusted_sh: &SignedHeader<C, H>,
-    untrusted_vals: &C::ValidatorSet,
-    untrusted_next_vals: &C::ValidatorSet,
+    untrusted_vals: &ValidatorSetImpl,
+    untrusted_next_vals: &ValidatorSetImpl,
     trust_threshold: L,
     trusting_period: Duration,
     now: SystemTime,
 ) -> Result<TrustedState<C, H>, Error>
-where
-    H: Header,
-    C: Commit,
-    L: TrustThreshold,
+    where
+        H: Header,
+        C: Commit,
+        L: TrustThreshold,
 {
     // Fetch the latest state and ensure it hasn't expired.
     let trusted_sh = trusted_state.last_header();
@@ -282,11 +271,11 @@ pub fn verify_bisection<C, H, L, R>(
     now: SystemTime,
     req: &R,
 ) -> Result<Vec<TrustedState<C, H>>, Error>
-where
-    H: Header,
-    C: Commit,
-    L: TrustThreshold,
-    R: Requester<C, H>,
+    where
+        H: Header,
+        C: Commit,
+        L: TrustThreshold,
+        R: Requester<C, H>,
 {
     // Ensure the latest state hasn't expired.
     // Note we only check for expiry once in this
@@ -336,19 +325,22 @@ fn verify_bisection_inner<H, C, L, R>(
     untrusted_height: Height,
     trust_threshold: L,
     req: &R,
-    mut cache: &mut Vec<TrustedState<C, H>>,
+    cache: &mut Vec<TrustedState<C, H>>,
 ) -> Result<TrustedState<C, H>, Error>
-where
-    H: Header,
-    C: Commit,
-    L: TrustThreshold,
-    R: Requester<C, H>,
+    where
+        H: Header,
+        C: Commit,
+        L: TrustThreshold,
+        R: Requester<C, H>,
 {
-    // fetch the header and vals for the new height
+    // // fetch the header and vals for the new height
     let untrusted_sh = &req.signed_header(untrusted_height)?;
     let untrusted_vals = &req.validator_set(untrusted_height)?;
-    let untrusted_next_vals =
-        &req.validator_set(untrusted_height.checked_add(1).expect("height overflow"))?;
+    let inc_untrusted_height = match untrusted_height.checked_add(1) {
+        Some(inc_untrusted_height) => inc_untrusted_height,
+        None => return Err(Kind::ImplementationSpecific),
+    };
+    let untrusted_next_vals = &req.validator_set(inc_untrusted_height)?;
 
     // check if we can skip to this height and if it verifies.
     match verify_single_inner(
@@ -366,21 +358,23 @@ where
             return Ok(ts);
         }
         Err(e) => {
-            match e.kind() {
+            match e {
                 // Insufficient voting power to update.
                 // Engage bisection, below.
-                &Kind::InsufficientVotingPower { .. } => (),
+                Kind::InsufficientVotingPower { .. } => (),
                 // If something went wrong, return the error.
-                real_err => return Err(real_err.to_owned().into()),
+                real_err => return Err(real_err),
             }
         }
     }
-
     // Get the pivot height for bisection.
     let trusted_h = trusted_state.last_header().header().height();
     let untrusted_h = untrusted_height;
-    let pivot_height = trusted_h.checked_add(untrusted_h).expect("height overflow") / 2;
-
+    let sum = match trusted_h.checked_add(untrusted_h) {
+        Some(sum) => sum,
+        None => return Err(Kind::ImplementationSpecific),
+    };
+    let pivot_height = sum / 2;
     // Recursive call to bisect to the pivot height.
     // When this completes, we will either return an error or
     // have updated the cache to the pivot height.
@@ -389,7 +383,7 @@ where
         pivot_height,
         trust_threshold,
         req,
-        &mut cache,
+        cache,
     )?;
 
     // Recursive call to update to the original untrusted_height.
@@ -398,10 +392,9 @@ where
         untrusted_height,
         trust_threshold,
         req,
-        &mut cache,
+        cache,
     )
 }
-*/
 
 /*
 #[cfg(test)]
