@@ -53,6 +53,7 @@ impl ValidatorSetImpl {
     }
 
     /// Total voting power of the set
+    #[pure]
     pub fn total_power(&self) -> u64 {
         self.total_power
     }
@@ -63,6 +64,8 @@ impl ValidatorSetImpl {
 /// Verifying the Commit requires access to an associated ValidatorSet
 /// to determine what voting power signed the commit.
 pub trait Commit: Clone {
+    // type ValidatorSet: ValidatorSet;
+
     /// Hash of the header this commit is for.
     fn header_hash(&self) -> Hash;
 

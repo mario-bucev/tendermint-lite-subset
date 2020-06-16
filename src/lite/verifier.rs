@@ -32,7 +32,7 @@ fn is_within_trust_period<H>(
         return Err(Kind::Expired {
             at: expires_at,
             now,
-        }.into());
+        });
     }
     // Also make sure the header is not after now.
     if header_time > now {
@@ -55,7 +55,7 @@ fn validate<C, H>(
 {
     let header = signed_header.header();
     let commit = signed_header.commit();
-
+/*
     // ensure the header validator hashes match the given validators
     if header.validators_hash() != vals.hash() {
         return Err(Kind::InvalidValidatorSet {
@@ -77,7 +77,7 @@ fn validate<C, H>(
             // commit_hash: commit.header_hash(),
         }.into());
     }
-
+*/
     // additional implementation specific validation:
     commit.validate(vals)?;
     Ok(())

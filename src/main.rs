@@ -4,6 +4,5 @@ pub mod lite;
 pub mod error;
 pub mod hash;
 
-fn main() {
-    // println!("Hello, world!");
-}
+#[trusted]
+fn main() {}

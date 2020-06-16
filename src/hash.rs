@@ -18,13 +18,19 @@ pub enum Algorithm {
 }
 
 /// Hash digests
+/*
 // #[derive(Copy, Clone, Hash, Eq, PartialEq, PartialOrd, Ord)]
 #[derive(Copy, Clone)] // Eq, PartialEq cause a crash
 pub enum Hash {
     /// SHA-256 hashes
-    Sha256//([u8; SHA256_HASH_SIZE]),
+    // Sha256
+    Sha256([u8; SHA256_HASH_SIZE]),
 }
-/*
+*/
+#[derive(Copy, Clone)] // Eq, PartialEq cause a crash
+pub struct Hash([u8; SHA256_HASH_SIZE]);
+
+
 impl Hash {
     /// Create a new `Hash` with the given algorithm type
     pub fn new(alg: Algorithm, bytes: &[u8]) -> Result<Hash, Kind> {
@@ -33,7 +39,7 @@ impl Hash {
                 if bytes.len() == 32 {
                     let mut h = [0u8; SHA256_HASH_SIZE];
                     h.copy_from_slice(bytes);
-                    Ok(Hash::Sha256(h))
+                    Ok(Hash(h))
                 } else {
                     Err(Kind::Parse)
                 }
@@ -52,6 +58,7 @@ impl Hash {
         }
     }
     */
+    /*
     /// Return the digest algorithm used to produce this hash
     pub fn algorithm(self) -> Algorithm {
         match self {
@@ -64,28 +71,29 @@ impl Hash {
         match self {
             Hash::Sha256(ref h) => h.as_ref(),
         }
-    }
+    }*/
 }
-*/
+
 impl PartialEq for Hash {
+    // "Fail to parse forall expression" :(
+    // #[ensures="result == (forall i: usize :: (0 <= i && i < SHA256_HASH_SIZE) ==> self.0[i] == other.0[i])"]
     fn eq(&self, other: &Self) -> bool {
         let mut i = 0;
         let mut cont_loop = i < SHA256_HASH_SIZE;
         let mut res = true;
-        // #[invariant="cont_loop ==> i < SHA256_HASH_SIZE"]
-        // #[invariant="!cont_loop ==> i >= SHA256_HASH_SIZE"]
-        // while cont_loop {
-        //     // We copy to avoid a crash due to limit support of reference-typed fields.
-        //     match (*self, *other) {
-        //         (Hash::Sha256(self_arr), Hash::Sha256(other_arr)) => {
-        //             if self_arr[i] != other_arr[i] {
-        //                 res = false;
-        //             }
-        //         }
-        //     }
-        //     i += 1;
-        //     cont_loop = i < SHA256_HASH_SIZE && res;
-        // }
+        #[invariant="i >= 0"]
+        #[invariant="cont_loop ==> i < SHA256_HASH_SIZE"]
+        #[invariant="!cont_loop ==> i >= SHA256_HASH_SIZE || !res"]
+        while cont_loop {
+            assert!(self.0.len() == SHA256_HASH_SIZE);
+            assert!(other.0.len() == SHA256_HASH_SIZE);
+            if self.0[i] != other.0[i] {
+                res = false;
+            }
+            i += 1;
+            assert!(i >= 0);
+            cont_loop = i < SHA256_HASH_SIZE && res;
+        }
         res
     }
 }
