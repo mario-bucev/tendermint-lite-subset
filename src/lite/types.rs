@@ -4,11 +4,7 @@
 use super::super::hash::Hash;
 
 use lite::error::{Error, Kind};
-// use serde::{Deserialize, Serialize};
-// use std::fmt::Debug;
 use std::time::SystemTime;
-
-// use anomaly::fail;
 
 pub type Height = u64;
 
@@ -107,7 +103,6 @@ pub trait TrustThreshold: Copy + Clone /*+ Debug*/ {
 /// voting power signed (in other words at least one honest validator signed).
 /// Some clients might require more than +1/3 and can implement their own
 /// [`TrustThreshold`] which can be passed into all relevant methods.
-// #[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[derive(Copy, Clone)]
 pub struct TrustThresholdFraction {
     numerator: u64,
@@ -144,11 +139,6 @@ impl TrustThresholdFraction {
         } else {
             Err(Kind::InvalidTrustThreshold)
         }
-        /*
-        Err(Kind::InvalidTrustThreshold {
-            got: format!("{}/{}", numerator, denominator),
-        }
-        .into())*/
     }
 }
 
@@ -186,7 +176,6 @@ where
 /// TrustedState contains a state trusted by a lite client,
 /// including the last header (at height h-1) and the validator set
 /// (at height h) to use to verify the next header.
-// #[derive(Clone, Debug, PartialEq)]
 #[derive(Clone)]
 pub struct TrustedState<C, H>
 where
@@ -196,8 +185,6 @@ where
     last_header: SignedHeader<C, H>, // height H-1
     validators: ValidatorSetImpl,     // height H
 }
-
-// 'not yet implemented: TyProjection(ProjectionTy { substs: [C], item_def_id: DefId(0/0:27 ~ main[317d]::lite[0]::types[0]::Commit[0]::ValidatorSet[0]) })', prusti-viper/src/encoder/type_encoder.rs:483:22
 
 impl<C, H> TrustedState<C, H>
 where
@@ -225,7 +212,6 @@ where
 
 
 /// SignedHeader bundles a [`Header`] and a [`Commit`] for convenience.
-// #[derive(Clone, Debug, PartialEq)] // NOTE: Copy/Clone/Debug for convenience in testing ...
 #[derive(Clone)]
 pub struct SignedHeader<C, H>
 where

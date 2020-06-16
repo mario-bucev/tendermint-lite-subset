@@ -2,19 +2,13 @@
 
 use super::super::hash::Hash;
 
-// use anomaly::{BoxError, Context};
 use std::time::SystemTime;
-// use thiserror::Error;
 
 /// The main error type verification methods will return.
 /// See [`Kind`] for the different kind of errors.
-// pub type Error = anomaly::Error<Kind>;
-
-// TODO: This may need adaptations
 pub type Error = Kind;
 
 /// All error kinds related to the light client.
-// #[derive(Clone, Debug, Error)]
 // #[derive(Clone)]
 pub enum Kind {
     /// The provided header expired.
@@ -31,20 +25,20 @@ pub enum Kind {
 
     /// Invalid validator hash.
     InvalidValidatorSet {
-        // header_val_hash: Hash,
-        // val_hash: Hash,
+        header_val_hash: Hash,
+        val_hash: Hash,
     },
 
     /// Invalid next validator hash.
     InvalidNextValidatorSet {
-        // header_next_val_hash: Hash,
-        // next_val_hash: Hash,
+        header_next_val_hash: Hash,
+        next_val_hash: Hash,
     },
 
     /// Commit is not for the header we expected.
     InvalidCommitValue {
-        // header_hash: Hash,
-        // commit_hash: Hash,
+        header_hash: Hash,
+        commit_hash: Hash,
     },
 
     /// Signed power does not account for +2/3 of total voting power.
@@ -54,11 +48,10 @@ pub enum Kind {
     InsufficientVotingPower {
         total: u64,
         signed: u64,
-        // trust_treshold: String,
     },
 
     /// This is returned if an invalid TrustThreshold is created.
-    InvalidTrustThreshold/* { got: String }*/,
+    InvalidTrustThreshold,
 
     /// Use the [`Kind::context`] method to wrap the underlying error of
     /// the implementation, if any.
@@ -68,11 +61,3 @@ pub enum Kind {
     /// the implementation, if any.
     ImplementationSpecific,
 }
-/*
-impl Kind {
-    /// Add additional context.
-    pub fn context(self, source: impl Into<BoxError>) -> Context<Kind> {
-        Context::new(self, Some(source.into()))
-    }
-}
-*/
