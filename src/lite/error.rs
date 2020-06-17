@@ -25,20 +25,20 @@ pub enum Kind {
 
     /// Invalid validator hash.
     InvalidValidatorSet {
-        header_val_hash: Hash,
-        val_hash: Hash,
+        // header_val_hash: Hash,
+        // val_hash: Hash,
     },
 
     /// Invalid next validator hash.
     InvalidNextValidatorSet {
-        header_next_val_hash: Hash,
-        next_val_hash: Hash,
+        // header_next_val_hash: Hash,
+        // next_val_hash: Hash,
     },
 
     /// Commit is not for the header we expected.
     InvalidCommitValue {
-        header_hash: Hash,
-        commit_hash: Hash,
+        // header_hash: Hash,
+        // commit_hash: Hash,
     },
 
     /// Signed power does not account for +2/3 of total voting power.

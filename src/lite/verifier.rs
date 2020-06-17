@@ -59,22 +59,22 @@ fn validate<C, H>(
     // ensure the header validator hashes match the given validators
     if header.validators_hash() != vals.hash() {
         return Err(Kind::InvalidValidatorSet {
-            header_val_hash: header.validators_hash(),
-            val_hash: vals.hash(),
+            // header_val_hash: header.validators_hash(),
+            // val_hash: vals.hash(),
         }.into());
     }
     if header.next_validators_hash() != next_vals.hash() {
         return Err(Kind::InvalidNextValidatorSet {
-            header_next_val_hash: header.next_validators_hash(),
-            next_val_hash: next_vals.hash(),
+            // header_next_val_hash: header.next_validators_hash(),
+            // next_val_hash: next_vals.hash(),
         }.into());
     }
 
     // ensure the header matches the commit
     if header.hash() != commit.header_hash() {
         return Err(Kind::InvalidCommitValue {
-            header_hash: header.hash(),
-            commit_hash: commit.header_hash(),
+            // header_hash: header.hash(),
+            // commit_hash: commit.header_hash(),
         }.into());
     }
 
@@ -188,8 +188,8 @@ fn verify_single_inner<H, C, L>(
             // ie. differentiate from when next_vals.hash() doesnt
             // match the header hash ...
             return Err(Kind::InvalidNextValidatorSet {
-                header_next_val_hash: trusted_vals_hash,
-                next_val_hash: untrusted_vals_hash,
+                // header_next_val_hash: trusted_vals_hash,
+                // next_val_hash: untrusted_vals_hash,
             }.into());
         }
     } else {
